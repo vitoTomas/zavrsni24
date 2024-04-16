@@ -13,6 +13,7 @@ int main(void) {
     FILE usart_IN = FDEV_SETUP_STREAM(NULL, __usart_receive_char, _FDEV_SETUP_READ);
 
     stdout = &usart_OUT;
+    stderr = &usart_OUT;
     stdin = &usart_IN;
 
     /* Startup */
@@ -27,24 +28,31 @@ int main(void) {
 }
 
 /* Syscall wrapper */
-void * syscall(uint8_t syscall, const uint8_t *args) {
-
-    void *return_value;
-    uint8_t temp;
-
+int syscall(uint8_t syscall, const uint8_t *args) {
     switch (syscall) {
-    case 1:
+
+    case _SYS_INIT_USART:
         __usart_init();
-        return NULL;
-    case 2:
+        return 0;
+
+    case _SYS_PRINT_CHAR:
         __usart_send_char(*args);
-        return NULL;
-    case 3:
-        temp = (uint8_t) __usart_receive_char(NULL);
-        return_value = (void * ) &temp;
-        return return_value;
+        return 0;
+
+    case _SYS_GET_CHAR:
+        return __usart_receive_char(NULL);
+
+    case _SYS_CALL_PROGRAM:
+        return __call(*args);
+
+    case _SYS_GET_FILE_STAT:
+        return __fstat_E(*args, (FILE_E *) (args + 1));
+
+    case _SYS_FIND_FILE:
+        return __ffind_E(*((int *) args), (const char *) (args + 4), (FILE_E *) (args + 4 + *((int *) args)));
+
     default:
-        return NULL;
+        return -1;
     }
 }
 

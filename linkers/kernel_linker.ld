@@ -19,7 +19,7 @@ SECTIONS
         *(.core_syscalls)
     } > FLASH
 
-    .test 0x1400 :
+    .test :
     {
         *(.test)
     } > FLASH
@@ -29,7 +29,7 @@ SECTIONS
         *(.mshell)
     } > FLASH
 
-    .data :
+    .data 0x801100:
     {
         __data_load_start = LOADADDR(.data);
         __data_start = .;

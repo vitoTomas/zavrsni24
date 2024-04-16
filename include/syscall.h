@@ -12,8 +12,10 @@
 #define _SYS_INIT_USART     1
 #define _SYS_PRINT_CHAR     2
 #define _SYS_GET_CHAR       3
-#define _SYS_CREATE_FILE    4
+#define _SYS_CREATE_FILE    4 /* DEPRICATED */
 #define _SYS_GET_FILE_STAT  5
+#define _SYS_FIND_FILE      6
+#define _SYS_CALL_PROGRAM   7
 
 /* Memory segments */
 #define __KERNEL_START_ADDR     0x0000
@@ -65,6 +67,7 @@ int __usart_receive_char(FILE * stream);
 void __usart_init();
 uint8_t __fcreate_E(const char * name, uint8_t type, uint8_t p_id, uint8_t size);
 int __fstat_E(uint8_t f_id, FILE_E * file);
+int __ffind_E(int path_size, const char * path, FILE_E * file);
 int __call(uint8_t file_id);
 
 #endif

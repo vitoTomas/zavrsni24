@@ -6,6 +6,7 @@
 
 int mshell(void) __attribute__((section(".mshell")));
 
+/* Kernel mode shell */
 int mshell(void) {
     char input[100];
     char path[200];
@@ -16,10 +17,8 @@ int mshell(void) {
     path[0] = '/';
     path[1] = '\0';
 
-    file_id = 1;
-
     /* Attempt to run a test program */
-    __call(file_id);
+    //__call(file_id);
 
     while(1) {
         printf_P("%s$> ", path);

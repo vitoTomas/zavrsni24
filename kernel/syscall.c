@@ -47,6 +47,8 @@ int __usart_receive_char(FILE * stream) {
 }
 
 /*
+    **DEPRICATED**
+
     File handling function for creating a file i.e. reserving memory.
     File create EEPROM/External currently supports only Program memory
     files with file descriptors stored in the built in EEPROM. Possible
@@ -150,6 +152,69 @@ int __fstat_E(uint8_t f_id, FILE_E * file) {
 }
 
 /*
+    File handling function made to search for a file based on its
+    path and sets the FILE_E struct if the file is successfully
+    found.
+
+    Warning: the function modifies the FILE_E struct passed, even
+    if the file is not found.
+
+    IN:
+        @ [path]        -   Pointer to the path string
+        @ [path_size]   -   The size of the path string
+    OUT:
+        @ [file]        -   FILE_E struct pointer that points
+                            to the search result
+    RETURN:
+        Result          -   success status of execution
+                            0 -> file not found
+                            1 -> file found
+*/
+int __ffind_E(int path_size, const char * path, FILE_E * file) {
+    uint8_t * address = (uint8_t *) 0;
+    uint8_t offset = 0;
+    uint8_t parent = 0;
+    int i = 0, found = 0, path_pointer = 0;
+
+    for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+        eeprom_read_block(file, address + offset, __SIZE_FILE_E);
+        if(file->parent_id == parent) {
+            found = 1;
+
+            while(path[path_pointer] != '/') {
+                if(path[path_pointer] != file->name[i]) {
+                    found = 0;
+                }
+                i++;
+                path_pointer++;
+            }
+            
+            /* Test if the lenght of the match matches the name in the path */
+            if(found) {
+                if(i < 11 && file->name[i] != '\0') {
+                    found = 0;
+                }
+            }
+
+            /* Found procedure */
+            if(found) {
+                if(path_pointer >= path_size) {
+                    break;
+                } else {
+                    parent = file->file_id;
+                    offset = 0;
+                }
+            }
+        }
+
+        i = 0;
+        path_pointer++;
+    }
+
+    return found;
+}
+
+/*
     The call function is a call to the kernel subroutine to indicate
     that a program wishes to start an another program.
 
@@ -158,7 +223,6 @@ int __fstat_E(uint8_t f_id, FILE_E * file) {
     RETURN:
                         -   success status of execution
 */
-
 int __call(uint8_t file_id) {
     typedef int (* Program)(void);
     Program run = NULL;

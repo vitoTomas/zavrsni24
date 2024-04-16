@@ -13,7 +13,7 @@ rem Define a variable to store the path to your custom headers directory
 set HEADER_DIR=.\include
 
 rem Compile source files using the specified linker file
-avr-gcc -mmcu=atmega328p -o output.elf -T %LINKER_FILE% -I %HEADER_DIR% %KERNEL_SOURCE_FILES% %SOURCE_FILES%
+avr-gcc -mmcu=atmega328p -o output.elf -Wl,--defsym=__heap_end=0x80ffff -T %LINKER_FILE% -I %HEADER_DIR% %KERNEL_SOURCE_FILES% %SOURCE_FILES%
 if errorlevel 1 (
     echo Compilation failed.
     exit /b 1

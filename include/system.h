@@ -17,6 +17,6 @@
 
 /* Memory organised section */
 int main(void) __attribute__((section(".kernel_main")));
-void * syscall(uint8_t syscall, const uint8_t *args) __attribute__((section(".core_syscalls")));
+int syscall(uint8_t syscall, const uint8_t *args) __attribute__((section(".core_syscalls")));
 
 #endif
