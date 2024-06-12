@@ -10,7 +10,7 @@ int mshell(char *user) __attribute__((section(".mshell")));
 
 /* User callable shell program */
 int mshell(char *user) {
-    FILE_E file;
+    FILE_P file;
     char directive[100], directive_copy[100], context[200], path_temp[200];
     char *token = NULL, *ptr, delim[] = " ", delim2[] = "/";
     int file_id, c = 0;
@@ -52,22 +52,32 @@ int mshell(char *user) {
             strcat(path_temp, token);
             strcat(path_temp, delim2);
 
-            file_id = __ffind_E(strlen(path_temp), path_temp, &file);
-            if (file_id == -1) continue;
+            file_id = __ffind_P(path_temp);
+            if (file_id == -1) {
+                printf_P("'%s' is not a directory or doesn't exist.\n\r", token);
+                continue;
+            }
+
+            __fstat_P(file_id, &file);
+            if (file.type != F_DIR) {
+                printf_P("'%s' is not a directory or doesn't exist.\n\r", token);
+                continue;
+            }
 
             strcpy(context, path_temp);
 
         } else if (!strcmp(COM[2], token)) {
-            (void) __flist_E(context);
+            (void) __flist_P(context);
         } else {
             /* User perhaps wants to start a program */
-            file_id = __ffind_E(strlen(token), token, &file);
-            __fstat_E(file_id, &file);
+            file_id = __ffind_P(token);
+            __fstat_P(file_id, &file);
 
-            if (file.type == F_EXE) {
+            if (file.type == F_PXE) {
                 __call(file_id);
             } else {
                 printf_P("'%s' is neither a command or an executable file.\n\r", token);
+                continue;
             }
         }
 

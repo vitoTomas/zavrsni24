@@ -50,10 +50,10 @@ int syscall(uint8_t syscall, const uint8_t *args) {
         return __call(*args);
 
     case _SYS_GET_FILE_STAT:
-        return __fstat_E(*args, (FILE_E *) (args + 1));
+        return __fstat_P(*args, (FILE_P *) (args + 1));
 
     case _SYS_FIND_FILE:
-        return __ffind_E(*((int *) args), (char *) (args + 4), (FILE_E *) (args + 4 + *((int *) args)));
+        return __ffind_P((char *) (args));
 
     default:
         return -1;

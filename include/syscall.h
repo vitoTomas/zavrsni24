@@ -24,7 +24,7 @@
 #define __RESERVED_START_ADDR   0x7800
 #define __PAGE_SIZE             128
 
-#define __EEPROM_SIZE           0x0400
+#define __PEPROM_SIZE           0x0400
 
 /* EEPROM/External memory file handler for executable code organisation.
    Possible future expansion to 32 B and support for external and non-executable
@@ -42,7 +42,7 @@
 struct __pgm_file {
     uint8_t page_loc;   /* Start page location */
     uint8_t type;       /* Type of file */
-#define F_EXE 0         /* Program file */
+#define F_PXE 0         /* Program file */
 #define F_RED 1         /* Read only file */
 #define F_DIR 2         /* Directory */       
     uint8_t file_id;    /* ID of a file */
@@ -52,9 +52,9 @@ struct __pgm_file {
     uint8_t name[11];   /* Name of the file */
 };
 
-typedef struct __pgm_file FILE_E;
+typedef struct __pgm_file FILE_P;
 
-#define __SIZE_FILE_E       16
+#define __SIZE_FILE_P       16
 
 #define __OFFSET_PAGE_LOC   0
 #define __OFFSET_TYPE       1
@@ -66,10 +66,11 @@ typedef struct __pgm_file FILE_E;
 int __usart_send_char(uint8_t c);
 int __usart_receive_char(FILE * stream);
 void __usart_init();
-uint8_t __fcreate_E(const char * name, uint8_t type, uint8_t p_id, uint8_t size);
-int __fstat_E(uint8_t f_id, FILE_E * file);
-int __ffind_E(int path_size, char * path, FILE_E * file);
-int __flist_E(char *path);
+/* **DEPRICATED** */
+uint8_t __fcreate_P(const char * name, uint8_t type, uint8_t p_id, uint8_t size);
+int __fstat_P(uint8_t f_id, FILE_P * file);
+int __ffind_P(char * path);
+int __flist_P(char *path);
 int __call(uint8_t file_id);
 
 #endif

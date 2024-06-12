@@ -58,15 +58,15 @@ int __usart_receive_char(FILE * stream) {
 
     IN:
         @ [name]    -   name of the file (maximum of 11 characters)
-        @ [type]    -   type of the file (check out FILE_E definition)
+        @ [type]    -   type of the file (check out FILE_P definition)
         @ [p_id]    -   ID of the parent file (directory)
         @ [size]    -   size defined by the number of pages the file takes
     RETURN:
         File ID     -   if 0 no file created, otherwise it is the ID of the
                         new file
 */
-uint8_t __fcreate_E(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
-    FILE_E file;
+uint8_t __fcreate_P(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
+    FILE_P file;
     uint8_t id_counter = 1;
     uint8_t * address = 0;
     uint8_t * write_address = 0;
@@ -83,7 +83,7 @@ uint8_t __fcreate_E(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
     }
 
     /* Find free memory for file descriptor */
-    for(address = 0; (uintptr_t) address < __EEPROM_SIZE; address += __SIZE_FILE_E) {
+    for(address = 0; (uintptr_t) address < __PEPROM_SIZE; address += __SIZE_FILE_P) {
         f_id = eeprom_read_byte(address + __OFFSET_FILE_ID);
         if(f_id == 0) break;
     }
@@ -96,7 +96,7 @@ uint8_t __fcreate_E(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
 
     do{
         f_id = eeprom_read_byte(address + __OFFSET_FILE_ID);
-        address += __SIZE_FILE_E;
+        address += __SIZE_FILE_P;
         if(f_id == id_counter) {
             id_counter++;
             address = 0;
@@ -111,29 +111,30 @@ uint8_t __fcreate_E(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
     file.size = size;
     strcpy_P((char * )&file.name, name);
 
-    eeprom_write_block(&file, address, __SIZE_FILE_E);
+    eeprom_write_block(&file, address, __SIZE_FILE_P);
 
     return id_counter;
 }
 
 /*
     File handling function for retriving the status of a file.
-    File status EEPROM/External currently supports only Program memory
-    files with file descriptors stored in the built in EEPROM. Possible
+    File status PROGRAM currently supports only Program memory
+    files with file descriptors stored in the built in PROG MEM. Possible
     future expansion for external memory and writeable files.
 
     IN:
         @ [name]    -   name of the file (maximum of 11 characters)
-        @ [type]    -   type of the file (check out FILE_E definition)
+        @ [type]    -   type of the file (check out FILE_P definition)
         @ [p_id]    -   ID of the parent file (directory)
         @ [size]    -   size defined by the number of pages the file takes
+
     RETURN:
         Result      -   success status of execution
                         0 -> success
                         -1 -> file not found
-                        -2 -> passed NULL as FILE_E pointer 
+                        -2 -> passed NULL as FILE_P pointer 
 */
-int __fstat_E(uint8_t f_id, FILE_E * file) {
+int __fstat_P(uint8_t f_id, FILE_P * file) {
     uint16_t address =  __RESERVED_START_ADDR;
     uint16_t offset = 0;
     uint8_t curr_id = 0xFF;
@@ -143,14 +144,14 @@ int __fstat_E(uint8_t f_id, FILE_E * file) {
     if(file == NULL) return -2;
     
     /* Find the file with the identifier */
-    for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+    for(offset; offset < __PEPROM_SIZE; offset += __SIZE_FILE_P) {
         curr_id = pgm_read_byte(address + offset + __OFFSET_FILE_ID);
         if(curr_id == f_id) break;
     }
 
     if(curr_id != f_id) return -1;
 
-    for(i = 0; i < sizeof(FILE_E); i++) {
+    for(i = 0; i < sizeof(FILE_P); i++) {
         ptr[i] = pgm_read_byte(address + offset + i);
     }
 
@@ -159,27 +160,19 @@ int __fstat_E(uint8_t f_id, FILE_E * file) {
 
 /*
     File handling function made to search for a file based on its
-    path and sets the FILE_E struct if the file is successfully
-    found.
-
-    Warning: the function modifies the FILE_E struct passed, even
-    if the file is not found.
+    path and returns its file ID.
 
     IN:
         @ [path]        -   Pointer to the path string
-        @ [path_size]   -   The size of the path string
-    OUT:
-        @ [file]        -   FILE_E struct pointer that points
-                            to the search result
+
     RETURN:
-        Result          -   success status of execution
-                            0 -> file not found
-                            1 -> file found
+        Result          -   success status of execution or file ID
+                            >= 0 -> success
+                            -1 -> file not found
 */
-int __ffind_E(int path_size, char * path, FILE_E * file) {
+int __ffind_P(char * path) {
     uint16_t address =  __RESERVED_START_ADDR;
     uint16_t offset = 0;
-    uint8_t *ptr = (uint8_t *) file;
     uint8_t parent = 0, id;
     uint8_t item_found = 0;
     char string[100], *token = NULL, name[12], delim[] = "/";
@@ -200,7 +193,7 @@ int __ffind_E(int path_size, char * path, FILE_E * file) {
             continue;
         }
 
-        for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+        for(offset; offset < __PEPROM_SIZE; offset += __SIZE_FILE_P) {
             id = pgm_read_byte(address + offset + __OFFSET_PARENT_ID);
             
             for(i = 0; i < 11; i++) {
@@ -230,12 +223,25 @@ int __ffind_E(int path_size, char * path, FILE_E * file) {
     return found;
 }
 
-int __flist_E(char *path) {
-    FILE_E file;
+/*
+    File handling function made to list a directory specified
+    by its path.
+
+    IN:
+        @ [path]        -   Pointer to the path string
+
+    RETURN:
+        Result          -   success status of execution or file ID
+                             0 -> success
+                            -1 -> file not found
+                            -2 -> file is not a directory (not implemented)
+*/
+int __flist_P(char *path) {
+    FILE_P file;
     uint16_t address =  __RESERVED_START_ADDR, offset = 0;
     uint8_t size, type;
     char name[12];
-    int i, item_no = 2, cid, id, parent = __ffind_E(strlen(path), path, &file);
+    int i, item_no = 2, cid, id, parent = __ffind_P(path);
 
     /* File (directory) does not exist */
     if (parent < 0) return -1;
@@ -248,7 +254,7 @@ int __flist_E(char *path) {
     printf_P(" -\t%4d\t.\n\r", 0);
     printf_P(" -\t%4d\t..\n\r", 0);
 
-    for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+    for(offset; offset < __PEPROM_SIZE; offset += __SIZE_FILE_P) {
         id = pgm_read_byte(address + offset + __OFFSET_PARENT_ID);
         cid = pgm_read_byte(address + offset + __OFFSET_FILE_ID);
     
@@ -265,7 +271,7 @@ int __flist_E(char *path) {
 
             switch (type)
             {
-            case F_EXE:
+            case F_PXE:
                 printf_P(" e\t");
                 break;
             case F_RED:
@@ -298,18 +304,18 @@ int __flist_E(char *path) {
         @ [file_id]     -   ID of the file to execute
     RETURN:
                         -   success status of execution
+                            -1 -> file not found
 */
 int __call(uint8_t file_id) {
     typedef int (* Program)(void);
     Program run = NULL;
-    FILE_E file;
+    FILE_P file;
     uint16_t address;
     int ret = 0;
     
     /* Retrive file information */
-    ret = __fstat_E(file_id, &file);
+    ret = __fstat_P(file_id, &file);
     if(ret) {
-        fprintf(stderr, "ERROR: Unable to locate the file.");
         return -1;
     }
 

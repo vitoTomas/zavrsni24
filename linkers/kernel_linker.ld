@@ -1,5 +1,5 @@
 TARGET(binary)
-INPUT (".\linkers\files")
+INPUT (.\linkers\files.bin)
 OUTPUT_FORMAT("elf32-avr", "elf32-avr", "elf32-avr")
 OUTPUT_ARCH(avr:5)
 
@@ -32,12 +32,10 @@ SECTIONS
         *(.mshell)
     } > FLASH
 
-    /*
-    .files 0x07800:
+    .files 0x7800:
     {
-        ".\linkers\files"
+        .\linkers\files.bin
     } > FLASH
-    */
 
     .data 0x801100:
     {
