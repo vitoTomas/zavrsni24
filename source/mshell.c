@@ -4,27 +4,73 @@
 #include <syscall.h>
 #include <stdioe.h>
 
-int mshell(void) __attribute__((section(".mshell")));
+#include <stdlib.h>
 
-/* Kernel mode shell */
-int mshell(void) {
-    char input[100];
-    char path[200];
+int mshell(char *user) __attribute__((section(".mshell")));
 
-    uint8_t file_id;
+/* User callable shell program */
+int mshell(char *user) {
+    FILE_E file;
+    char directive[100], directive_copy[100], context[200], path_temp[200];
+    char *token = NULL, *ptr, delim[] = " ", delim2[] = "/";
+    int file_id, c = 0;
 
-    input[0] = '\0';       // Input placeholder
-    path[0] = '/';
-    path[1] = '\0';
+    char COM[5][11];
 
-    /* Attempt to run a test program */
-    //__call(file_id);
+    strcpy(COM[0], "cd");
+    strcpy(COM[1], "..");
+    strcpy(COM[2], "ls");
+
+    directive[0] = '\0';
+    strcpy(context, "/");
 
     while(1) {
-        printf_P("%s$> ", path);
-        escanf_P("%s", input);
+        printf_P("%s:%s$ ", user, context);
+        egets(directive);
 
-        strcat(path, input);
+        token = strtok(directive, delim);
+
+        if(!strcmp(COM[0], token) && token != NULL) {
+            token = strtok(NULL, delim);
+            if (token == NULL) continue;
+
+            if (!strcmp(COM[1], token) && strlen(context) > 1) {
+                c = 0;
+
+                ptr = strrchr(context, delim2[0]);
+                ptr--;
+                for (ptr; ptr >= context; ptr--) {
+                    c++;
+                    if (*ptr == '/') break;               
+                }
+
+                context[strlen(context) - c] = '\0';
+                continue;
+            }
+
+            strcpy(path_temp, context);
+            strcat(path_temp, token);
+            strcat(path_temp, delim2);
+
+            file_id = __ffind_E(strlen(path_temp), path_temp, &file);
+            if (file_id == -1) continue;
+
+            strcpy(context, path_temp);
+
+        } else if (!strcmp(COM[2], token)) {
+            (void) __flist_E(context);
+        } else {
+            /* User perhaps wants to start a program */
+            file_id = __ffind_E(strlen(token), token, &file);
+            __fstat_E(file_id, &file);
+
+            if (file.type == F_EXE) {
+                __call(file_id);
+            } else {
+                printf_P("'%s' is neither a command or an executable file.\n\r", token);
+            }
+        }
+
         printf_P("\n\r");
     }
 

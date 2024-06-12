@@ -6,6 +6,8 @@
 */
 
 #include <system.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*
     USART initialization function. Called by the Kernel during
@@ -132,21 +134,25 @@ uint8_t __fcreate_E(PGM_P name, uint8_t type, uint8_t p_id, uint8_t size) {
                         -2 -> passed NULL as FILE_E pointer 
 */
 int __fstat_E(uint8_t f_id, FILE_E * file) {
-    uint8_t * address = (uint8_t *) 0;
-    uint8_t offset = 0;
+    uint16_t address =  __RESERVED_START_ADDR;
+    uint16_t offset = 0;
     uint8_t curr_id = 0xFF;
+    uint8_t *ptr = (uint8_t *) file;
+    uint8_t i;
 
     if(file == NULL) return -2;
     
     /* Find the file with the identifier */
     for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
-        curr_id = eeprom_read_byte(address + offset + __OFFSET_FILE_ID);
+        curr_id = pgm_read_byte(address + offset + __OFFSET_FILE_ID);
         if(curr_id == f_id) break;
     }
 
     if(curr_id != f_id) return -1;
 
-    eeprom_read_block(file, address + offset, __SIZE_FILE_E);
+    for(i = 0; i < sizeof(FILE_E); i++) {
+        ptr[i] = pgm_read_byte(address + offset + i);
+    }
 
     return 0;
 }
@@ -170,48 +176,118 @@ int __fstat_E(uint8_t f_id, FILE_E * file) {
                             0 -> file not found
                             1 -> file found
 */
-int __ffind_E(int path_size, const char * path, FILE_E * file) {
-    uint8_t * address = (uint8_t *) 0;
-    uint8_t offset = 0;
-    uint8_t parent = 0;
-    int i = 0, found = 0, path_pointer = 0;
+int __ffind_E(int path_size, char * path, FILE_E * file) {
+    uint16_t address =  __RESERVED_START_ADDR;
+    uint16_t offset = 0;
+    uint8_t *ptr = (uint8_t *) file;
+    uint8_t parent = 0, id;
+    uint8_t item_found = 0;
+    char string[100], *token = NULL, name[12], delim[] = "/";
+    int i = 0, found = -1;
 
-    for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
-        eeprom_read_block(file, address + offset, __SIZE_FILE_E);
-        if(file->parent_id == parent) {
-            found = 1;
+    strcpy(string, path);
 
-            while(path[path_pointer] != '/') {
-                if(path[path_pointer] != file->name[i]) {
-                    found = 0;
-                }
-                i++;
-                path_pointer++;
-            }
+    /* Detect root directory */
+    if (!strcmp(path, delim)) return 0;
+
+    token = strtok(string, delim);
+    while(token != NULL) {
+        offset = 0;
+        item_found = 0;
+
+        if (strlen(token) == 0) {
+            token = strtok(NULL, delim);
+            continue;
+        }
+
+        for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+            id = pgm_read_byte(address + offset + __OFFSET_PARENT_ID);
             
-            /* Test if the lenght of the match matches the name in the path */
-            if(found) {
-                if(i < 11 && file->name[i] != '\0') {
-                    found = 0;
-                }
+            for(i = 0; i < 11; i++) {
+                name[i] = pgm_read_byte(address + offset + __OFFSET__NAME + i);
             }
 
-            /* Found procedure */
-            if(found) {
-                if(path_pointer >= path_size) {
+            name[11] = '\0';
+
+            if(!strcmp(token, name)) {
+                if(id == parent) {
+                    found = pgm_read_byte(address + offset + __OFFSET_FILE_ID);
+                    parent = found;
+                    item_found = 1;
                     break;
-                } else {
-                    parent = file->file_id;
-                    offset = 0;
                 }
             }
         }
 
-        i = 0;
-        path_pointer++;
+        if (item_found == 0) {
+            found = -1;
+            break;
+        }
+
+        token = strtok(NULL, delim);
     }
 
     return found;
+}
+
+int __flist_E(char *path) {
+    FILE_E file;
+    uint16_t address =  __RESERVED_START_ADDR, offset = 0;
+    uint8_t size, type;
+    char name[12];
+    int i, item_no = 2, cid, id, parent = __ffind_E(strlen(path), path, &file);
+
+    /* File (directory) does not exist */
+    if (parent < 0) return -1;
+
+    /* File is not a directory (FIXME) */
+    /* ... */
+
+    printf_P("type\tsize\tname\n\r");
+    printf_P("----------------------------------------\n\r");
+    printf_P(" -\t%4d\t.\n\r", 0);
+    printf_P(" -\t%4d\t..\n\r", 0);
+
+    for(offset; offset < __EEPROM_SIZE; offset += __SIZE_FILE_E) {
+        id = pgm_read_byte(address + offset + __OFFSET_PARENT_ID);
+        cid = pgm_read_byte(address + offset + __OFFSET_FILE_ID);
+    
+        if (id == parent && cid != parent) {
+            item_no++;
+            size = pgm_read_byte(address + offset + __OFFSET_SIZE);
+            type = pgm_read_byte(address + offset + __OFFSET_TYPE);
+
+            for(i = 0; i < 11; i++) {
+                name[i] = pgm_read_byte(address + offset + __OFFSET__NAME + i);
+            }
+
+            name[11] = '\0';
+
+            switch (type)
+            {
+            case F_EXE:
+                printf_P(" e\t");
+                break;
+            case F_RED:
+                printf_P(" r\t");
+                break;
+            case F_DIR:
+                printf_P(" d\t");
+                break;
+            default:
+                printf_P(" -\t");
+                break;
+            }
+
+            printf_P("%4d\t%s\n\r", (int) size * __PAGE_SIZE, name);
+        }
+
+    }
+
+    printf_P("----------------------------------------\n\r");
+    printf_P("Items: %2d\n\r", item_no);
+
+    return 0;
 }
 
 /*

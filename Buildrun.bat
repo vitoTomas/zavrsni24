@@ -34,11 +34,11 @@ if errorlevel 1 (
 )
 
 rem Execute mega_uploader.bat with the generated hex file
-.\mega_uploader.bat output.hex .\eeprom\files
+.\mega_uploader.bat output.hex
 if errorlevel 1 (
     echo Uploading failed.
     exit /b 1
 )
 
-rem Pause to keep the command prompt open after successful execution (optional)
-pause
+rem Start putty
+putty.exe -serial COM3 -sercfg 9600

@@ -16,7 +16,6 @@
 #define USART_BAUD 9600
 
 /* Memory organised section */
-int main(void) __attribute__((section(".kernel_main")));
 int syscall(uint8_t syscall, const uint8_t *args) __attribute__((section(".core_syscalls")));
 
 #endif

@@ -12,9 +12,13 @@ int main(void) {
     FILE usart_OUT = FDEV_SETUP_STREAM((int (*)(char, FILE *))__usart_send_char, NULL, _FDEV_SETUP_WRITE);
     FILE usart_IN = FDEV_SETUP_STREAM(NULL, __usart_receive_char, _FDEV_SETUP_READ);
 
+    char user[11];
+
     stdout = &usart_OUT;
     stderr = &usart_OUT;
     stdin = &usart_IN;
+
+    strcpy(user, "SYS");
 
     /* Startup */
     __usart_init();
@@ -22,7 +26,7 @@ int main(void) {
     printf_P("INFO: System ready!\n\r");
 
     /* Run MicroShell */
-    mshell();
+    mshell(user);
 
     return 0;
 }
@@ -49,7 +53,7 @@ int syscall(uint8_t syscall, const uint8_t *args) {
         return __fstat_E(*args, (FILE_E *) (args + 1));
 
     case _SYS_FIND_FILE:
-        return __ffind_E(*((int *) args), (const char *) (args + 4), (FILE_E *) (args + 4 + *((int *) args)));
+        return __ffind_E(*((int *) args), (char *) (args + 4), (FILE_E *) (args + 4 + *((int *) args)));
 
     default:
         return -1;

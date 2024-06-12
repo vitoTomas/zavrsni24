@@ -18,3 +18,26 @@ int escanf_P(const char * __fmt, void * data) {
 
     return sscanf_P(buffer, __fmt, data);
 }
+
+int egets(char *buffer) {
+    unsigned offset = 0;
+
+    do {
+        buffer[offset] = (char) __usart_receive_char(stdin);
+        putchar(buffer[offset]);
+
+        if(buffer[offset] == 13) break;
+
+        if(buffer[offset] == 127) {
+            if (offset > 0) offset--;
+            continue;
+        }
+
+        offset++;
+    } while(offset < BUFFER * 2);
+
+    putchar('\n');
+    buffer[offset] = '\0';
+    
+    return offset;
+}

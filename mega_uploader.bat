@@ -11,9 +11,11 @@ REM Set your avrdude command with the appropriate programmer, COM port, and baud
 set PROGRAMMER=arduino
 set PORT=COM3
 set BAUDRATE=115200
+set BAUDRATE_EEPROM=9600
 
 REM Run avrdude with the provided HEX file path
-avrdude -c %PROGRAMMER% -p m328p -P %PORT% -b %BAUDRATE% -U flash:w:%1:i eeprom:w:%2:i
+avrdude -c %PROGRAMMER% -p m328p -P %PORT% -b %BAUDRATE% -U flash:w:%1:i
+
 
 REM Check the avrdude exit code to determine success or failure
 if %errorlevel% neq 0 (
